@@ -59,7 +59,7 @@ Please send us back:
  - Any other findings on the data that you would like to share
  - Ideas about any further models or data transformations that you would try if you had more time
 
-Please try to make commits as often and concise as possible, to allow us to follow your working process.
+Please try to make commits as often and concise as possible to allow us to follow your working process.
 
 ### How to submit the code
 
@@ -69,7 +69,7 @@ The GitHub repo should contain:
  - All the code (both for exploration and the models) and the commits history showing the process you followed
  - The instructions on how to train and evaluate the model you would build
 
-Please, share *all* the code you developed, in case we have further questions.
+*Please share **full** codebase you developed while working on the task*.
 
 ## How we evaluate the task
 
