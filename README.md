@@ -44,7 +44,7 @@ The dataset columns defintion:
 |Column|Description|
 |---|---|
 |*customer_id*|Unique customer ID.|
-|*is_returning_customer*|**0** if the customer did not returned ordered goods, or did not order again in the 6 months after 2017-02-28.<br>**1** if the customer returned ordered goods, or ordered again at least once after 2017-02-28.|
+|*is_returning_customer*|**0** if the customer did not return ordered goods, or did not order again in the 6 months after 2017-02-28.<br>**1** if the customer returned ordered goods, or ordered again at least once after 2017-02-28.|
 
 The data rows are ordered by *customer_id*.
 
