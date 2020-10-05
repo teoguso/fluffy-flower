@@ -1,4 +1,4 @@
-# Technical task for the role of a Data Scientists at the Marketing Tech dept. of Delivery Hero SE
+# Technical task for the role of a Data Scientist at the Marketing Tech dept. of Delivery Hero SE
 
 The exercise is based on a simplified version of real model built by our team. *Its objective* is, to predict whether a customer is going to return ordered goods in *the upcoming 6 months* or not.
 
