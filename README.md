@@ -71,7 +71,7 @@ The GitHub repo should contain:
 
 Please, share *all* the code you developed, in case we have further questions.
 
-### How we evaluate the task
+## How we evaluate the task
 
 Please take into account the solution quality points that we value the most:
 
