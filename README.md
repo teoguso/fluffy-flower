@@ -1,5 +1,5 @@
 
-# Technical task for the role of a Data Scientist at the Marketing Tech dept. of Delivery Hero SE  
+# Technical task for the _Data Scientist_ role at the Marketing Tech dept., Delivery Hero SE  
   
 The exercise is based on a simplified version of a real model built by our team. *Its objective* is, to predict whether a customer is going to return (order again from us) in *the upcoming 6 months* or not.  
 So the main idea is, *to create an algorithm to correctly predict the **_is_returning_customer_*** label (see details [here](#Labeled-data)) based on the [provided data](#Data-dictionary).  
@@ -75,11 +75,11 @@ The GitHub repo should contain:
   
 Please take into account the solution quality points that we value the most:  
   
- - Solution is working, i.e. codebase can be executed by us in our environment by following your instructions  
- - Structure of the repository is clear  
+ - The solution is working, i.e. codebase can be executed by us in our environment by following your instructions  
+ - The structure of the repository is clear  
  - The codebase is human-readable  
  - Python best practices are being followed, i.e. good development practices and Python principles and idioms are in place  
- - Commits are atomic  
+ - The commits are atomic  
  - Unit/integration/smoke tests are implemented  
   
 Regarding the modeling task, we value:  
@@ -92,7 +92,7 @@ Regarding the modeling task, we value:
   
 ## Final notes  
   
-We value a working solution and the reasoning of choices behind the problem solution the most. With your solution, please try to express yourself in a way you would do so, while working on a real business problem.  
+We value a working solution and the reasoning of choices behind the solution the most. With your solution, please try to express yourself in a way you would do, while working on a real business problem.  
   
 Please do not hesitate to write us in case of further questions. We would be happy to address them as soon as possible to clarify the task.  
   
