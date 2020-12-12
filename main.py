@@ -3,18 +3,21 @@ import logging
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from pyarrow import Table
+from pyarrow import parquet as pq
+
 
 logger = logging.getLogger(__name__)
 
-ORDER_DATA = Path("data/machine_learning_challenge_order_data.csv.gz")
-LABEL_DATA = Path("machine_learning_challenge_labeled_data.csv.gz")
-TYPED_ORDER_DATA = Path("data/order_data.parquet")
+ORDER_DATA_PATH = Path("data/machine_learning_challenge_order_data.csv.gz")
+LABEL_DATA_PATH = Path("machine_learning_challenge_labeled_data.csv.gz")
+TYPED_ORDER_DATA_PATH = Path("data/order_data_batch.json")
 
 
 def main():
     # Read data
-    logger.debug(f"Reading {ORDER_DATA}")
-    order_data = pd.read_csv(ORDER_DATA)
+    logger.debug(f"Reading {ORDER_DATA_PATH}")
+    order_data = pd.read_csv(ORDER_DATA_PATH)
     # Impute missing values
     logger.debug(f"Imputing missing data...")
     order_data.fillna(0, inplace=True)
@@ -34,12 +37,20 @@ def main():
     )
     # Cleaning up
     order_data.drop(columns=['order_date', 'order_hour'], inplace=True)
+    # Remove sparse period
+    order_data = order_data.set_index(
+        'order_datetime'
+    ).loc["2015-03-01":].reset_index()
     # Storing
-    logger.debug(f"Storing typed data to {TYPED_ORDER_DATA}...")
-    order_data.to_parquet(
-        TYPED_ORDER_DATA,
-        partition_cols=['order_datetime']
-    )
+    logger.debug(f"Storing typed data to {TYPED_ORDER_DATA_PATH}...")
+    print(order_data.dtypes)
+    with open(TYPED_ORDER_DATA_PATH, 'w') as file_handler:
+        order_data.to_json(file_handler, orient='table')
+        # order_data.to_parquet(
+        #     TYPED_ORDER_DATA,
+        #     # partition_cols=['order_datetime']
+        # )
+    # ### FEATURE EXTRACTION
 
 
 if __name__ == "__main__":
