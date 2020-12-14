@@ -2,17 +2,17 @@
 import logging
 
 import joblib
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from pathlib import Path
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, f1_score, roc_curve, auc, plot_precision_recall_curve
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import RobustScaler
+
+from returning.eval import print_plot_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,7 @@ def main():
         df_test,
         roc_out_path=CUSTOMER_MODEL_ROC_PLOT_PATH,
         proba_dist_prec_rec_path=CUSTOMER_MODEL_PDIST_PREC_REC_PLOT_PATH,
+        title="Customer Features Model",
     )
 
 
@@ -76,24 +77,6 @@ def ml_model_customer_features(customer_model_path, train=None, force=False):
     return search
 
 
-def print_plot_metrics(fit_search_grid, test_data, roc_out_path, proba_dist_prec_rec_path):
-    x_test = test_data.drop(columns=['is_returning_customer'])
-    y_test = test_data['is_returning_customer'].to_numpy()
-    print(classification_report(y_test, fit_search_grid.predict(x_test)))
-    y_proba = fit_search_grid.predict_proba(x_test)
-    # Plotting
-    plt.style.use('ggplot')
-    f1, auc_score = plot_roc_auc_f1(y_test, y_proba)
-    plt.savefig(roc_out_path, dpi=150)
-    logger.debug(f"AUC (ROC): {auc_score}")
-    logger.debug(f"f1 score: {f1}")
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-    plot_probability_distribution(y_proba, y_test, ax1)
-    plot_precision_recall_curve(fit_search_grid, x_test, y_test, ax=ax2)
-    ax2.set_title("Precision-Recall curve")
-    plt.savefig(proba_dist_prec_rec_path, dpi=150)
-
-
 def prepare_train_test(customer_features_path, label_data_path):
     logger.debug(f"Reading customer features from {customer_features_path}...")
     customer_features = pd.read_json(
@@ -123,34 +106,6 @@ def prepare_train_test(customer_features_path, label_data_path):
         random_state=42,
     )
     return train, test
-
-
-def plot_probability_distribution(y_proba, y_true, ax=None):
-    if ax is None:
-        fig, ax = plt.subplots()
-    pd.Series(y_proba[:, 1]).loc[y_true >= .5].plot.hist(bins=99, alpha=.5, label='Positive', ax=ax)
-    pd.Series(y_proba[:, 1]).loc[y_true < .5].plot.hist(bins=99, alpha=.5, label='Negative', ax=ax)
-    ax.set_xlabel("Probability")
-    ax.set_title("Probability Distribution")
-    ax.legend()
-
-
-def plot_roc_auc_f1(true_labels, probability, title=None):
-    # This is a convenience function that takes care of boring stuff
-    f1 = f1_score(true_labels, probability[:, 1]>.5)
-    fpr, tpr, _ = roc_curve(true_labels, probability[:, 1])
-    auc_score = auc(fpr, tpr)
-    fig, ax = plt.subplots(figsize=(6, 6))
-    if title is not None:
-        ax.set_title(title)
-    ax.plot([0, 1], [0, 1], '--', label="Random")
-    ax.plot(fpr, tpr, label="Your model")
-    ax.set_xlabel("False positive rate")
-    ax.set_ylabel("True positive rate")
-    ax.annotate(f"AUC: {auc_score:.4}", (.8, 0.15))
-    ax.annotate(f"F1: {f1:.4}", (.8, 0.1))
-    ax.legend()
-    return f1, auc_score
 
 
 def create_customer_features(typed_order_data_path, customer_features_path, force=False):
