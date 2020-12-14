@@ -1,9 +1,18 @@
 #!/usr/bin/env python
 import logging
+
+import joblib
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from pathlib import Path
 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, f1_score, roc_curve, auc, plot_precision_recall_curve
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import RobustScaler
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +20,9 @@ ORDER_DATA_PATH = Path("data/machine_learning_challenge_order_data.csv.gz")
 LABEL_DATA_PATH = Path("data/machine_learning_challenge_labeled_data.csv.gz")
 TYPED_ORDER_DATA_PATH = Path("data/order_data_batch.json")
 CUSTOMER_FEATURES_PATH = Path("data/customer_features.json")
+BEST_CUSTOMER_MODEL_PATH = Path("models/best_customer_model.joblib")
+
+
 
 
 def main():
@@ -19,10 +31,107 @@ def main():
     # Feature extraction
     create_customer_features()
     # Model training
-    cf = pd.read_json(
-        CUSTOMER_FEATURES_PATH,
-        orient='table',
-    )
+    # "Customer features"
+    ml_model_customer_features()
+
+
+def ml_model_customer_features(force=False):
+    if BEST_CUSTOMER_MODEL_PATH.exists() and not force:
+        logger.warning("Features creation skipped!")
+    else:
+        logger.debug(f"Reading customer features from {CUSTOMER_FEATURES_PATH}...")
+        customer_features = pd.read_json(
+            CUSTOMER_FEATURES_PATH,
+            orient='table',
+        )
+        labels = pd.read_csv(LABEL_DATA_PATH)
+        # This aligns the labels with the features on the correct CID
+        labels = customer_features.join(labels.set_index('customer_id'))['is_returning_customer']
+        features_plus_labels = customer_features.join(labels)
+        # NOTE: This is cheating because we already know which one is the majority class
+        logger.debug(f"Balancing classes...")
+        negative_data = features_plus_labels.loc[labels == 0].sample(
+            n=(labels == 1).sum(),
+            random_state=42,
+        )
+        positive_data = features_plus_labels.loc[labels == 1]
+        balanced_data = pd.concat((positive_data, negative_data))
+        logger.debug(f"Positive/negative class ratio: {balanced_data['is_returning_customer'].mean()}")
+        logger.debug(f"Splitting train/test...")
+        # Train/test split
+        train, test = train_test_split(
+            balanced_data,
+            train_size=.8,
+            shuffle=True,
+            stratify=balanced_data['is_returning_customer'].to_numpy(),
+            random_state=42,
+        )
+        X = train.drop(columns=['is_returning_customer']).to_numpy()
+        y = train['is_returning_customer'].to_numpy()
+        logger.debug("Pipeline setup...")
+        scaler = RobustScaler()
+        rf = RandomForestClassifier(n_jobs=-1, verbose=1)
+        logreg = LogisticRegression(n_jobs=-1, verbose=1)
+        pipe = Pipeline(
+            steps=[('scaler', scaler), ('classifier', rf)]
+        )
+        # Grid-search parameters
+        param_grid = [
+            {'classifier': [rf], 'classifier__n_estimators': [800]},
+            {'classifier': [logreg], 'classifier__C': np.logspace(-3, 0, 3)},
+        ]
+        # Grid search definition
+        search = GridSearchCV(pipe, param_grid, cv=5, scoring='roc_auc', n_jobs=-1, verbose=3)
+        logger.debug(f"Fitting grid search...")
+        search.fit(X, y)
+        logger.debug(f"Best model and parameters (CV score={search.best_score_:.3f}):")
+        logger.debug(f"{search.best_params_}")
+        logger.debug(f"Best Estimator:")
+        logger.debug(f"{search.best_estimator_}")
+        with open(BEST_CUSTOMER_MODEL_PATH, 'wb') as file_handler:
+            joblib.dump(search, file_handler)
+        x_test = test.drop(columns=['is_returning_customer'])
+        y_test = test['is_returning_customer'].to_numpy()
+        y_proba = search.predict_proba(x_test)
+        # Plotting
+        plt.style.use('ggplot')
+        f1, auc_score = plot_roc_auc_f1(y_test, y_proba)
+        logger.debug(f"AUC (ROC): {auc_score}")
+        logger.debug(f"f1 score: {f1}")
+        print(classification_report(y_test, search.predict(x_test)))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+        plot_probability_distribution(y_proba, y_test, ax1)
+        plot_precision_recall_curve(search, x_test, y_test, ax=ax2)
+        ax2.set_title("Precision-Recall curve")
+        plt.show()
+
+
+def plot_probability_distribution(y_proba, y_true, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    pd.Series(y_proba[:, 1]).loc[y_true >= .5].plot.hist(bins=99, alpha=.5, label='Positive', ax=ax)
+    pd.Series(y_proba[:, 1]).loc[y_true < .5].plot.hist(bins=99, alpha=.5, label='Negative', ax=ax)
+    ax.set_xlabel("Probability")
+    ax.set_title("Probability Distribution")
+    ax.legend()
+
+
+def plot_roc_auc_f1(true_labels, probability, title=None):
+    # This is a convenience function that takes care of boring stuff
+    f1 = f1_score(true_labels, probability[:, 1]>.5)
+    fpr, tpr, _ = roc_curve(true_labels, probability[:, 1])
+    auc_score = auc(fpr, tpr)
+    fig, ax = plt.subplots(figsize=(6, 6))
+    if title is not None:
+        ax.set_title(title)
+    ax.plot([0, 1], [0, 1], '--', label="Random")
+    ax.plot(fpr, tpr, label="Your model")
+    ax.set_xlabel("False positive rate")
+    ax.set_ylabel("True positive rate")
+    ax.annotate(f"AUC: {auc_score:.4}", (.8, 0.15))
+    ax.annotate(f"F1: {f1:.4}", (.8, 0.1))
+    ax.legend()
+    return f1, auc_score
 
 
 def create_customer_features(force=False):
