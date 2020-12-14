@@ -21,6 +21,8 @@ LABEL_DATA_PATH = Path("data/machine_learning_challenge_labeled_data.csv.gz")
 TYPED_ORDER_DATA_PATH = Path("data/order_data_batch.json")
 CUSTOMER_FEATURES_PATH = Path("data/customer_features.json")
 BEST_CUSTOMER_MODEL_PATH = Path("models/best_customer_model.joblib")
+CUSTOMER_MODEL_ROC_PLOT_PATH = Path("data/customer_features_roc.png")
+CUSTOMER_MODEL_PDIST_PRC_PLOT_PATH = Path("data/customer_features_pdist_prc.png")
 
 
 
@@ -92,18 +94,19 @@ def ml_model_customer_features(force=False):
             joblib.dump(search, file_handler)
         x_test = test.drop(columns=['is_returning_customer'])
         y_test = test['is_returning_customer'].to_numpy()
+        print(classification_report(y_test, search.predict(x_test)))
         y_proba = search.predict_proba(x_test)
         # Plotting
         plt.style.use('ggplot')
         f1, auc_score = plot_roc_auc_f1(y_test, y_proba)
+        plt.savefig(CUSTOMER_MODEL_ROC_PLOT_PATH, dpi=150)
         logger.debug(f"AUC (ROC): {auc_score}")
         logger.debug(f"f1 score: {f1}")
-        print(classification_report(y_test, search.predict(x_test)))
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
         plot_probability_distribution(y_proba, y_test, ax1)
         plot_precision_recall_curve(search, x_test, y_test, ax=ax2)
         ax2.set_title("Precision-Recall curve")
-        plt.show()
+        plt.savefig(CUSTOMER_MODEL_PDIST_PRC_PLOT_PATH, dpi=150)
 
 
 def plot_probability_distribution(y_proba, y_true, ax=None):
