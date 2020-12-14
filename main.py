@@ -33,8 +33,8 @@ def main():
     # Model training
     # "Customer features"
     train, test = prepare_train_test()
-    search = ml_model_customer_features()
-    print_plot_metrics(search, test)
+    search_grid_fit = ml_model_customer_features()
+    print_plot_metrics(search_grid_fit, test)
 
 
 def ml_model_customer_features(force=False, train=None):
@@ -300,7 +300,11 @@ def preprocess_data(force=False):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.DEBUG,
-    )
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
     main()
