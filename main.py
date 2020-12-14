@@ -15,7 +15,7 @@ CUSTOMER_FEATURES_PATH = Path("data/customer_features.json")
 
 def main():
     # Initial data processing
-    data_preprocessing()
+    preprocess_data()
     # ### FEATURE EXTRACTION
     create_customer_features()
 
@@ -131,7 +131,7 @@ def create_customer_features():
     )
 
 
-def data_preprocessing():
+def preprocess_data():
     # Read data
     logger.debug(f"Reading {ORDER_DATA_PATH}")
     order_data = pd.read_csv(ORDER_DATA_PATH)
