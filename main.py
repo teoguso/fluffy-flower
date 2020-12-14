@@ -22,25 +22,30 @@ TYPED_ORDER_DATA_PATH = Path("data/order_data_batch.json")
 CUSTOMER_FEATURES_PATH = Path("data/customer_features.json")
 BEST_CUSTOMER_MODEL_PATH = Path("models/best_customer_model.joblib")
 CUSTOMER_MODEL_ROC_PLOT_PATH = Path("data/customer_features_roc.png")
-CUSTOMER_MODEL_PDIST_PRC_PLOT_PATH = Path("data/customer_features_pdist_prc.png")
+CUSTOMER_MODEL_PDIST_PREC_REC_PLOT_PATH = Path("data/customer_features_pdist_prc.png")
 
 
 def main():
     # Initial data processing
     preprocess_data(ORDER_DATA_PATH, TYPED_ORDER_DATA_PATH)
     # Feature extraction
-    create_customer_features()
+    create_customer_features(TYPED_ORDER_DATA_PATH, CUSTOMER_FEATURES_PATH)
     # Model training
     # "Customer features"
-    train, test = prepare_train_test()
-    search_grid_fit = ml_model_customer_features()
-    print_plot_metrics(search_grid_fit, test)
+    df_train, df_test = prepare_train_test(CUSTOMER_FEATURES_PATH, LABEL_DATA_PATH)
+    search_grid_fit = ml_model_customer_features(BEST_CUSTOMER_MODEL_PATH, train=df_train)
+    print_plot_metrics(
+        search_grid_fit,
+        df_test,
+        roc_out_path=CUSTOMER_MODEL_ROC_PLOT_PATH,
+        proba_dist_prec_rec_path=CUSTOMER_MODEL_PDIST_PREC_REC_PLOT_PATH,
+    )
 
 
-def ml_model_customer_features(force=False, train=None):
-    if BEST_CUSTOMER_MODEL_PATH.exists() and not force:
+def ml_model_customer_features(customer_model_path, train=None, force=False):
+    if customer_model_path.exists() and not force:
         logger.warning("ML training skipped!")
-        search = joblib.load(BEST_CUSTOMER_MODEL_PATH)
+        search = joblib.load(customer_model_path)
     elif train is None:
         raise ValueError("Training data not specified!")
     else:
@@ -66,12 +71,12 @@ def ml_model_customer_features(force=False, train=None):
         logger.debug(f"{search.best_params_}")
         logger.debug(f"Best Estimator:")
         logger.debug(f"{search.best_estimator_}")
-        with open(BEST_CUSTOMER_MODEL_PATH, 'wb') as file_handler:
+        with open(customer_model_path, 'wb') as file_handler:
             joblib.dump(search, file_handler)
     return search
 
 
-def print_plot_metrics(fit_search_grid, test_data):
+def print_plot_metrics(fit_search_grid, test_data, roc_out_path, proba_dist_prec_rec_path):
     x_test = test_data.drop(columns=['is_returning_customer'])
     y_test = test_data['is_returning_customer'].to_numpy()
     print(classification_report(y_test, fit_search_grid.predict(x_test)))
@@ -79,23 +84,23 @@ def print_plot_metrics(fit_search_grid, test_data):
     # Plotting
     plt.style.use('ggplot')
     f1, auc_score = plot_roc_auc_f1(y_test, y_proba)
-    plt.savefig(CUSTOMER_MODEL_ROC_PLOT_PATH, dpi=150)
+    plt.savefig(roc_out_path, dpi=150)
     logger.debug(f"AUC (ROC): {auc_score}")
     logger.debug(f"f1 score: {f1}")
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
     plot_probability_distribution(y_proba, y_test, ax1)
     plot_precision_recall_curve(fit_search_grid, x_test, y_test, ax=ax2)
     ax2.set_title("Precision-Recall curve")
-    plt.savefig(CUSTOMER_MODEL_PDIST_PRC_PLOT_PATH, dpi=150)
+    plt.savefig(proba_dist_prec_rec_path, dpi=150)
 
 
-def prepare_train_test():
-    logger.debug(f"Reading customer features from {CUSTOMER_FEATURES_PATH}...")
+def prepare_train_test(customer_features_path, label_data_path):
+    logger.debug(f"Reading customer features from {customer_features_path}...")
     customer_features = pd.read_json(
-        CUSTOMER_FEATURES_PATH,
+        customer_features_path,
         orient='table',
     )
-    labels = pd.read_csv(LABEL_DATA_PATH)
+    labels = pd.read_csv(label_data_path)
     # This aligns the labels with the features on the correct CID
     labels = customer_features.join(labels.set_index('customer_id'))['is_returning_customer']
     features_plus_labels = customer_features.join(labels)
@@ -148,13 +153,13 @@ def plot_roc_auc_f1(true_labels, probability, title=None):
     return f1, auc_score
 
 
-def create_customer_features(force=False):
-    if CUSTOMER_FEATURES_PATH.exists() and not force:
+def create_customer_features(typed_order_data_path, customer_features_path, force=False):
+    if customer_features_path.exists() and not force:
         logger.warning("Features creation skipped!")
     else:
         logger.debug("Reading typed data...")
         df_orders = pd.read_json(
-            TYPED_ORDER_DATA_PATH,
+            typed_order_data_path,
             orient='table',
         )
         logger.debug("Creating time-based order features..")
@@ -254,9 +259,9 @@ def create_customer_features(force=False):
         n_cities.name = 'n_cities'
         customer_features = customer_features.join(n_cities)
         # Store to disk
-        logger.debug(f"Saving to disk at {CUSTOMER_FEATURES_PATH.as_posix()}...")
+        logger.debug(f"Saving to disk at {customer_features_path.as_posix()}...")
         customer_features.to_json(
-            CUSTOMER_FEATURES_PATH,
+            customer_features_path,
             orient='table',
         )
 
