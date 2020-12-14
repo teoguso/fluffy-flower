@@ -39,35 +39,9 @@ def main():
 
 def ml_model_customer_features(force=False):
     if BEST_CUSTOMER_MODEL_PATH.exists() and not force:
-        logger.warning("Features creation skipped!")
+        logger.warning("ML training skipped!")
     else:
-        logger.debug(f"Reading customer features from {CUSTOMER_FEATURES_PATH}...")
-        customer_features = pd.read_json(
-            CUSTOMER_FEATURES_PATH,
-            orient='table',
-        )
-        labels = pd.read_csv(LABEL_DATA_PATH)
-        # This aligns the labels with the features on the correct CID
-        labels = customer_features.join(labels.set_index('customer_id'))['is_returning_customer']
-        features_plus_labels = customer_features.join(labels)
-        # NOTE: This is cheating because we already know which one is the majority class
-        logger.debug(f"Balancing classes...")
-        negative_data = features_plus_labels.loc[labels == 0].sample(
-            n=(labels == 1).sum(),
-            random_state=42,
-        )
-        positive_data = features_plus_labels.loc[labels == 1]
-        balanced_data = pd.concat((positive_data, negative_data))
-        logger.debug(f"Positive/negative class ratio: {balanced_data['is_returning_customer'].mean()}")
-        logger.debug(f"Splitting train/test...")
-        # Train/test split
-        train, test = train_test_split(
-            balanced_data,
-            train_size=.8,
-            shuffle=True,
-            stratify=balanced_data['is_returning_customer'].to_numpy(),
-            random_state=42,
-        )
+        train, test = prepare_train_test()
         X = train.drop(columns=['is_returning_customer']).to_numpy()
         y = train['is_returning_customer'].to_numpy()
         logger.debug("Pipeline setup...")
@@ -107,6 +81,37 @@ def ml_model_customer_features(force=False):
         plot_precision_recall_curve(search, x_test, y_test, ax=ax2)
         ax2.set_title("Precision-Recall curve")
         plt.savefig(CUSTOMER_MODEL_PDIST_PRC_PLOT_PATH, dpi=150)
+
+
+def prepare_train_test():
+    logger.debug(f"Reading customer features from {CUSTOMER_FEATURES_PATH}...")
+    customer_features = pd.read_json(
+        CUSTOMER_FEATURES_PATH,
+        orient='table',
+    )
+    labels = pd.read_csv(LABEL_DATA_PATH)
+    # This aligns the labels with the features on the correct CID
+    labels = customer_features.join(labels.set_index('customer_id'))['is_returning_customer']
+    features_plus_labels = customer_features.join(labels)
+    # NOTE: This is cheating because we already know which one is the majority class
+    logger.debug(f"Balancing classes...")
+    negative_data = features_plus_labels.loc[labels == 0].sample(
+        n=(labels == 1).sum(),
+        random_state=42,
+    )
+    positive_data = features_plus_labels.loc[labels == 1]
+    balanced_data = pd.concat((positive_data, negative_data))
+    logger.debug(f"Positive/negative class ratio: {balanced_data['is_returning_customer'].mean()}")
+    logger.debug(f"Splitting train/test...")
+    # Train/test split
+    train, test = train_test_split(
+        balanced_data,
+        train_size=.8,
+        shuffle=True,
+        stratify=balanced_data['is_returning_customer'].to_numpy(),
+        random_state=42,
+    )
+    return train, test
 
 
 def plot_probability_distribution(y_proba, y_true, ax=None):
