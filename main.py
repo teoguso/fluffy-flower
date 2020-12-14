@@ -25,8 +25,6 @@ CUSTOMER_MODEL_ROC_PLOT_PATH = Path("data/customer_features_roc.png")
 CUSTOMER_MODEL_PDIST_PRC_PLOT_PATH = Path("data/customer_features_pdist_prc.png")
 
 
-
-
 def main():
     # Initial data processing
     preprocess_data()
@@ -66,21 +64,25 @@ def ml_model_customer_features(force=False):
         logger.debug(f"{search.best_estimator_}")
         with open(BEST_CUSTOMER_MODEL_PATH, 'wb') as file_handler:
             joblib.dump(search, file_handler)
-        x_test = test.drop(columns=['is_returning_customer'])
-        y_test = test['is_returning_customer'].to_numpy()
-        print(classification_report(y_test, search.predict(x_test)))
-        y_proba = search.predict_proba(x_test)
-        # Plotting
-        plt.style.use('ggplot')
-        f1, auc_score = plot_roc_auc_f1(y_test, y_proba)
-        plt.savefig(CUSTOMER_MODEL_ROC_PLOT_PATH, dpi=150)
-        logger.debug(f"AUC (ROC): {auc_score}")
-        logger.debug(f"f1 score: {f1}")
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-        plot_probability_distribution(y_proba, y_test, ax1)
-        plot_precision_recall_curve(search, x_test, y_test, ax=ax2)
-        ax2.set_title("Precision-Recall curve")
-        plt.savefig(CUSTOMER_MODEL_PDIST_PRC_PLOT_PATH, dpi=150)
+        print_plot_metrics(search, test)
+
+
+def print_plot_metrics(fit_search_grid, test_data):
+    x_test = test_data.drop(columns=['is_returning_customer'])
+    y_test = test_data['is_returning_customer'].to_numpy()
+    print(classification_report(y_test, fit_search_grid.predict(x_test)))
+    y_proba = fit_search_grid.predict_proba(x_test)
+    # Plotting
+    plt.style.use('ggplot')
+    f1, auc_score = plot_roc_auc_f1(y_test, y_proba)
+    plt.savefig(CUSTOMER_MODEL_ROC_PLOT_PATH, dpi=150)
+    logger.debug(f"AUC (ROC): {auc_score}")
+    logger.debug(f"f1 score: {f1}")
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+    plot_probability_distribution(y_proba, y_test, ax1)
+    plot_precision_recall_curve(fit_search_grid, x_test, y_test, ax=ax2)
+    ax2.set_title("Precision-Recall curve")
+    plt.savefig(CUSTOMER_MODEL_PDIST_PRC_PLOT_PATH, dpi=150)
 
 
 def prepare_train_test():
