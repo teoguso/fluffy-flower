@@ -27,7 +27,7 @@ CUSTOMER_MODEL_PDIST_PRC_PLOT_PATH = Path("data/customer_features_pdist_prc.png"
 
 def main():
     # Initial data processing
-    preprocess_data()
+    preprocess_data(ORDER_DATA_PATH, TYPED_ORDER_DATA_PATH)
     # Feature extraction
     create_customer_features()
     # Model training
@@ -261,14 +261,19 @@ def create_customer_features(force=False):
         )
 
 
-def preprocess_data(force=False):
-    """Produce a correctly typed dataset from raw data, if necessary"""
-    if TYPED_ORDER_DATA_PATH.exists() and not force:
+def preprocess_data(input_data_path, output_data_path, force=False):
+    """Produce a correctly typed dataset from raw data, if necessary
+    :param output_data_path:
+    :param input_data_path:
+    :param force:
+    """
+    if output_data_path.exists() and not force:
         logger.warning("Preprocessing skipped!")
     else:
         # Read data
-        logger.debug(f"Reading {ORDER_DATA_PATH}")
-        order_data = pd.read_csv(ORDER_DATA_PATH)
+        data_path = input_data_path
+        logger.debug(f"Reading {data_path}")
+        order_data = pd.read_csv(data_path)
         # Impute missing values
         logger.debug(f"Imputing missing data...")
         order_data.fillna(0, inplace=True)
@@ -293,9 +298,9 @@ def preprocess_data(force=False):
             'order_datetime'
         ).loc["2015-03-01":].reset_index()
         # Storing
-        logger.debug(f"Storing typed data to {TYPED_ORDER_DATA_PATH}...")
+        logger.debug(f"Storing typed data to {output_data_path}...")
         logger.debug(f"Data types: \n{order_data.dtypes}")
-        with open(TYPED_ORDER_DATA_PATH, 'w') as file_handler:
+        with open(output_data_path, 'w') as file_handler:
             order_data.to_json(file_handler, orient='table')
 
 
