@@ -3,8 +3,6 @@ import logging
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from pyarrow import Table
-from pyarrow import parquet as pq
 
 
 logger = logging.getLogger(__name__)
@@ -15,6 +13,11 @@ TYPED_ORDER_DATA_PATH = Path("data/order_data_batch.json")
 
 
 def main():
+    data_preprocessing()
+    # ### FEATURE EXTRACTION
+
+
+def data_preprocessing():
     # Read data
     logger.debug(f"Reading {ORDER_DATA_PATH}")
     order_data = pd.read_csv(ORDER_DATA_PATH)
@@ -28,7 +31,7 @@ def main():
     # Categories
     for col in order_data.columns:
         if col.endswith('_id') and order_data[col].dtype == 'int':
-            order_data[col] = order_data[col].astype('category')
+            order_data[col] = order_data[col].astype('str').astype('category')
         else:
             continue
     order_data['order_datetime'] = pd.to_datetime(
@@ -46,11 +49,6 @@ def main():
     print(order_data.dtypes)
     with open(TYPED_ORDER_DATA_PATH, 'w') as file_handler:
         order_data.to_json(file_handler, orient='table')
-        # order_data.to_parquet(
-        #     TYPED_ORDER_DATA,
-        #     # partition_cols=['order_datetime']
-        # )
-    # ### FEATURE EXTRACTION
 
 
 if __name__ == "__main__":
