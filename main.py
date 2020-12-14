@@ -14,8 +14,13 @@ CUSTOMER_FEATURES_PATH = Path("data/customer_features.json")
 
 
 def main():
+    # Initial data processing
     data_preprocessing()
     # ### FEATURE EXTRACTION
+    create_customer_features()
+
+
+def create_customer_features():
     logger.debug("Reading typed data...")
     df_orders = pd.read_json(
         TYPED_ORDER_DATA_PATH,
@@ -28,7 +33,7 @@ def main():
                     (df_orders['order_datetime'].dt.month == 1) & (df_orders['order_datetime'].dt.day == 1)
             ) | (
                     (df_orders['order_datetime'].dt.month == 12) & (
-                        (df_orders['order_datetime'].dt.day == 25) | (df_orders['order_datetime'].dt.day == 31))
+                    (df_orders['order_datetime'].dt.day == 25) | (df_orders['order_datetime'].dt.day == 31))
             )
     )
     # Time of day, day of week
