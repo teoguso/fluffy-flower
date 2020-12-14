@@ -32,14 +32,18 @@ def main():
     create_customer_features()
     # Model training
     # "Customer features"
-    ml_model_customer_features()
+    train, test = prepare_train_test()
+    search = ml_model_customer_features()
+    print_plot_metrics(search, test)
 
 
-def ml_model_customer_features(force=False):
+def ml_model_customer_features(force=False, train=None):
     if BEST_CUSTOMER_MODEL_PATH.exists() and not force:
         logger.warning("ML training skipped!")
+        search = joblib.load(BEST_CUSTOMER_MODEL_PATH)
+    elif train is None:
+        raise ValueError("Training data not specified!")
     else:
-        train, test = prepare_train_test()
         X = train.drop(columns=['is_returning_customer']).to_numpy()
         y = train['is_returning_customer'].to_numpy()
         logger.debug("Pipeline setup...")
@@ -64,7 +68,7 @@ def ml_model_customer_features(force=False):
         logger.debug(f"{search.best_estimator_}")
         with open(BEST_CUSTOMER_MODEL_PATH, 'wb') as file_handler:
             joblib.dump(search, file_handler)
-        print_plot_metrics(search, test)
+    return search
 
 
 def print_plot_metrics(fit_search_grid, test_data):
@@ -201,7 +205,6 @@ def create_customer_features(force=False):
         max_customer_order_rank = df_orders.groupby(
             'customer_id'
         )['customer_order_rank'].max()
-        max_customer_order_rank
         max_customer_order_rank.name = 'max_customer_order_rank'
         customer_features = customer_features.join(max_customer_order_rank)
         # Failed orders
