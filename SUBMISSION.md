@@ -62,12 +62,16 @@ which is often a big plus in production.
 Eventually a logistic regression was the better one, with
 a AUC for the ROC curve of 0.81.
 
+![](cf_roc.png)
+
 __Categorical data:__ (AKA _dummy_features_) The premise with categorical data was
 to have algorithms that would work well with sparse matrices,
 so I chose multinomial naive Bayes and logistic regression.
 
 In this case the logistic regression was the better model, with
 a AUC for the ROC curve of 0.76.
+
+![](df_roc.png)
 
 Once the analysis is run, graphs with evaluation metrics
 are produced.
@@ -79,7 +83,7 @@ dummy_features_pdist_prc.png
 dummy_features_roc.png
 ```
 
-In `models/` one can find the two grid search objects, containing
+In `models/` one will find the two grid search objects, containing
 the two best models.
 
 ```
