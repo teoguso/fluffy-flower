@@ -130,7 +130,19 @@ provide an overall better performance.
 - Better analysis and scaling of feature distribution
   (The scaler used here is a generic good compromise
   but wasn't really optimized);
+  
+- More function docstrings
 
+- Type annotations
+
+
+### Python code structure
+
+The main script is `main.py` and the `returning/` module
+contains all the utility function necessary for it to work.
+Within this module, `ml.py` contains all the data and ML-related
+code, while `eval.py` contains all the model evaluation and
+plotting utilities.
 
 ### Quickstart
 
