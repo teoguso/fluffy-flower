@@ -55,6 +55,8 @@ bash cleanup.sh
 
 ### Possible improvements
 
+(Almost everything in this list is related to lack of time):
+
 - Evaluation and optimization of an ensemble model using
   the two models developed
   (AKA *voting classifier*);
@@ -80,4 +82,10 @@ bash cleanup.sh
 
 - Fix random seed everywhere for reproducibility;
 
-- Tests
+- Tests;
+
+- Better naming of variables/objects;
+
+- Better analysis and scaling of feature distribution
+  (The scaler used here is a generic good compromise
+  but wasn't really optimized);
