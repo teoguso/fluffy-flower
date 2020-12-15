@@ -1,4 +1,4 @@
-# Job Application Submission Summary
+# ML Case Study Submission
 
 ### Summary
 
