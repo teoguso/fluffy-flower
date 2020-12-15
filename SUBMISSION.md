@@ -29,8 +29,12 @@ bash run.sh
 
 In `data/` one can find a collection of PNG images:
 ```
-
+customer_features_pdist_prc.png
+customer_features_roc.png
+dummy_features_pdist_prc.png
+dummy_features_roc.png
 ```
+which display the performance of the two models.
 
 #### Cleanup
 
