@@ -48,7 +48,7 @@ In general I tried to use simple ML models that give
 decent result right off the bat without need for much
 tuning, due to the time constraint.
 
-__Numerical data:__ Here I tested a random forest and a
+__Numerical data:__ (AKA _customer_features_) Here I tested a random forest and a
 logistic regression, on the premise that I wanted to
 have a probability prediction (E.g. an SVM would not
 have done the job in this case).
@@ -62,12 +62,30 @@ which is often a big plus in production.
 Eventually a logistic regression was the better one, with
 a AUC for the ROC curve of 0.81.
 
-__Categorical data:__ The premise with categorical data was
+__Categorical data:__ (AKA _dummy_features_) The premise with categorical data was
 to have algorithms that would work well with sparse matrices,
 so I chose multinomial naive Bayes and logistic regression.
 
 In this case the logistic regression was the better model, with
 a AUC for the ROC curve of 0.76.
+
+Once the analysis is run, graphs with evaluation metrics
+are produced.
+In `data/` one can find a collection of PNG images:
+```
+customer_features_pdist_prc.png
+customer_features_roc.png
+dummy_features_pdist_prc.png
+dummy_features_roc.png
+```
+
+In `models/` one can find the two grid search objects, containing
+the two best models.
+
+```
+best_customer_model.joblib
+best_dummy_model.joblib
+```
 
 #### Ensemble model
 
