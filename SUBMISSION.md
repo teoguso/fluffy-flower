@@ -12,6 +12,33 @@ However, the images and data produced will remain in the
 container and therefore won't be accessible.
 To get better access to the analysis results, see below.
 
+### Repo structure
+
+```
+├── data
+├── models
+├── notebooks
+│   ├── 01-mg-initial-data-exploration.ipynb
+│   ├── 02-feature-analysis-extraction.ipynb
+│   ├── 05-pandas-feature-extraction.ipynb
+│   ├── 08-sklearn-classifier-customer-features.ipynb
+│   ├── 09-one-hot-representation-model.ipynb
+│   └── archive
+├── README.md
+├── Dockerfile
+├── requirements.txt
+├── main.py
+├── returning
+│   ├── eval.py
+│   └── ml.py
+├── launch-analysis.sh
+├── launch-notebooks.sh
+├── run.sh
+├── cleanup.sh
+├── Notes.md
+└── SUBMISSION.md
+```
+
 ### Installation
 
 Python 3.8 is required.
