@@ -1,5 +1,31 @@
 # Job Application Submission Summary
 
+### Summary
+
+#### Data transformations
+
+The data transformations can be divided in two distinct
+groups: categorical and non-categorical (or numerical).
+This distinction appeared naturally in my case because
+I encountered some additional challenges with the
+categorical data (namely RAM issues) which made so
+that I decided to focus first on the numerical data,
+and then on the categorical.
+
+__Numerical features:__ 
+These are created in the function `create_customer_features` in
+the file `returning/ml.py`.
+
+The general approach was to extract a maximum of information
+from any column.
+When aggregating the data per each customer, I calculated
+min, max, average, standard deviation, and number of
+unique elements whenever possible.
+
+For time-based features, I took the number of days since both
+first and last order.
+
+
 ### Quickstart
 
 Requirements: docker.
