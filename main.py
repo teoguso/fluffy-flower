@@ -7,7 +7,7 @@ from returning.eval import print_plot_metrics
 from returning.ml import create_dummy_features, ml_model_dummy_features, ml_model_customer_features, prepare_train_test, \
     create_customer_features, preprocess_data
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('returning')
 
 ORDER_DATA_PATH = Path("data/machine_learning_challenge_order_data.csv.gz")
 LABEL_DATA_PATH = Path("data/machine_learning_challenge_labeled_data.csv.gz")

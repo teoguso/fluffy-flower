@@ -11,7 +11,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, RobustScaler
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('returning')
 
 
 def preprocess_data(input_data_path, output_data_path, force=False):
@@ -58,15 +58,15 @@ def preprocess_data(input_data_path, output_data_path, force=False):
 
 
 def prepare_train_test(customer_features_path, label_data_path):
-    logger.debug(f"Reading customer features from {customer_features_path}...")
-    logger.debug(f"customer_features_path: {customer_features_path}")
     if isinstance(customer_features_path, Path):
+        logger.debug(f"Reading customer features from {customer_features_path}...")
         customer_features = pd.read_json(
             customer_features_path,
             orient='table',
         )
     else:
         # Read directly a dataframe
+        logger.debug(f"Reading customer features from dataframe...")
         customer_features = customer_features_path
     labels = pd.read_csv(label_data_path)
     # This aligns the labels with the features on the correct CID
@@ -101,7 +101,7 @@ def ml_model_dummy_features(training_data, trained_model_path, force=False):
         X = training_data.drop(columns=['is_returning_customer']).to_numpy()
         y = training_data['is_returning_customer'].to_numpy()
         nb = MultinomialNB()
-        logreg = LogisticRegression(n_jobs=-1, verbose=3)
+        logreg = LogisticRegression(n_jobs=-1, verbose=0)
         pipe = Pipeline(
             steps=[('classifier', nb)]
         )
@@ -109,7 +109,7 @@ def ml_model_dummy_features(training_data, trained_model_path, force=False):
             {'classifier': [nb], 'classifier__alpha': [.1, .3, .6, 1]},
             {'classifier': [logreg], 'classifier__C': np.logspace(-5, 0, 6)},
         ]
-        search = GridSearchCV(pipe, param_grid, cv=5, scoring='roc_auc', n_jobs=-1, verbose=3)
+        search = GridSearchCV(pipe, param_grid, cv=5, scoring='roc_auc', n_jobs=-1, verbose=1)
         logger.debug(f"Fitting grid search...")
         search.fit(X, y)
         logger.debug(f"Best model and parameters (CV score={search.best_score_:.3f}):")
@@ -177,8 +177,8 @@ def ml_model_customer_features(training_data, trained_model_path, force=False):
         y = training_data['is_returning_customer'].to_numpy()
         logger.debug("Pipeline setup...")
         scaler = RobustScaler()
-        rf = RandomForestClassifier(n_jobs=-1, verbose=1)
-        logreg = LogisticRegression(n_jobs=-1, verbose=1)
+        rf = RandomForestClassifier(n_jobs=-1, verbose=0)
+        logreg = LogisticRegression(n_jobs=-1, verbose=0)
         pipe = Pipeline(
             steps=[('scaler', scaler), ('classifier', rf)]
         )
@@ -188,7 +188,7 @@ def ml_model_customer_features(training_data, trained_model_path, force=False):
             {'classifier': [logreg], 'classifier__C': np.logspace(-3, 0, 3)},
         ]
         # Grid search definition
-        search = GridSearchCV(pipe, param_grid, cv=5, scoring='roc_auc', n_jobs=-1, verbose=3)
+        search = GridSearchCV(pipe, param_grid, cv=5, scoring='roc_auc', n_jobs=-1, verbose=1)
         logger.debug(f"Fitting grid search...")
         search.fit(X, y)
         logger.debug(f"Best model and parameters (CV score={search.best_score_:.3f}):")
