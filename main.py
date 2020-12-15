@@ -41,7 +41,6 @@ def main():
     # ### Dummy features model
     dummy_features = create_dummy_features(TYPED_ORDER_DATA_PATH, DUMMY_FEATURES_PATH)
     # Model training
-    # df_train_dummy, df_test_dummy = prepare_train_test(DUMMY_FEATURES_PATH, LABEL_DATA_PATH)
     df_train_dummy, df_test_dummy = prepare_train_test(dummy_features, LABEL_DATA_PATH)
     search_grid_fit_dummy = ml_model_dummy_features(df_train_dummy, BEST_DUMMY_MODEL_PATH)
     print_plot_metrics(
