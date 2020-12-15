@@ -9,8 +9,9 @@ from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import RobustScaler, OneHotEncoder
 
 from returning.eval import print_plot_metrics
 
@@ -20,9 +21,13 @@ ORDER_DATA_PATH = Path("data/machine_learning_challenge_order_data.csv.gz")
 LABEL_DATA_PATH = Path("data/machine_learning_challenge_labeled_data.csv.gz")
 TYPED_ORDER_DATA_PATH = Path("data/order_data_batch.json")
 CUSTOMER_FEATURES_PATH = Path("data/customer_features.json")
+DUMMY_FEATURES_PATH = Path("data/dummy_features.json")
 BEST_CUSTOMER_MODEL_PATH = Path("models/best_customer_model.joblib")
+BEST_DUMMY_MODEL_PATH = Path("models/best_dummy_model.joblib")
 CUSTOMER_MODEL_ROC_PLOT_PATH = Path("data/customer_features_roc.png")
 CUSTOMER_MODEL_PDIST_PREC_REC_PLOT_PATH = Path("data/customer_features_pdist_prc.png")
+DUMMIES_MODEL_ROC_PLOT_PATH = Path("data/dummy_features_roc.png")
+DUMMIES_MODEL_PDIST_PREC_REC_PLOT_PATH = Path("data/dummy_features_pdist_prc.png")
 
 
 def main():
@@ -33,25 +38,111 @@ def main():
     # Model training
     # "Customer features"
     df_train, df_test = prepare_train_test(CUSTOMER_FEATURES_PATH, LABEL_DATA_PATH)
-    search_grid_fit = ml_model_customer_features(BEST_CUSTOMER_MODEL_PATH, train=df_train)
+    search_grid_fit_cf = ml_model_customer_features(training_data=df_train, trained_model_path=BEST_CUSTOMER_MODEL_PATH)
     print_plot_metrics(
-        search_grid_fit,
+        search_grid_fit_cf,
         df_test,
         roc_out_path=CUSTOMER_MODEL_ROC_PLOT_PATH,
         proba_dist_prec_rec_path=CUSTOMER_MODEL_PDIST_PREC_REC_PLOT_PATH,
         title="Customer Features Model",
     )
+    # Dummy features model
+    dummy_features = create_dummy_features(TYPED_ORDER_DATA_PATH, DUMMY_FEATURES_PATH)
+    # Model training
+    # df_train_dummy, df_test_dummy = prepare_train_test(DUMMY_FEATURES_PATH, LABEL_DATA_PATH)
+    df_train_dummy, df_test_dummy = prepare_train_test(dummy_features, LABEL_DATA_PATH)
+    search_grid_fit_dummy = ml_model_dummy_features(df_train_dummy, BEST_DUMMY_MODEL_PATH)
+    print_plot_metrics(
+        search_grid_fit_dummy,
+        df_test_dummy,
+        roc_out_path=DUMMIES_MODEL_ROC_PLOT_PATH,
+        proba_dist_prec_rec_path=DUMMIES_MODEL_PDIST_PREC_REC_PLOT_PATH,
+        title="Dummy Features Model",
+    )
 
 
-def ml_model_customer_features(customer_model_path, train=None, force=False):
-    if customer_model_path.exists() and not force:
-        logger.warning("ML training skipped!")
-        search = joblib.load(customer_model_path)
-    elif train is None:
-        raise ValueError("Training data not specified!")
+def create_dummy_features(typed_order_data_path, output_features_path, force=False):
+    """Extract one-hot representation (AKA dummy variables) from categories
+
+    :param typed_order_data_path:
+    :param output_features_path:
+    :param force:
+    :return:
+    """
+    # if output_features_path.exists() and not force:
+    #     logger.warning("Dummy features creation skipped!")
+    # else:
+    logger.debug("Reading typed data...")
+    orders = pd.read_json(
+        typed_order_data_path,
+        orient='table',
+    )
+    # Time of day, day of week
+    orders['hour_of_day'] = orders['order_datetime'].dt.hour
+    orders['day_of_week'] = orders['order_datetime'].dt.dayofweek
+    # categorical_columns = ['restaurant_id',
+    #                        'city_id', 'payment_id', 'platform_id', 'transmission_id',
+    #                        'hour_of_day', 'day_of_week']
+    categorical_columns_miniset = [
+        #     'restaurant_id',
+        #        'city_id',
+        'payment_id', 'platform_id', 'transmission_id',
+        'hour_of_day', 'day_of_week']
+    # other_columns = ['order_datetime', 'customer_order_rank', 'is_failed',
+    #                  'voucher_amount', 'delivery_fee', 'amount_paid', 'is_holiday']
+    # groupby_column = 'customer_id'
+    encoder = OneHotEncoder(handle_unknown='ignore')
+    encoder.fit(orders[categorical_columns_miniset].to_numpy())
+    logger.debug(f"Categories in the encoder: {encoder.categories_}")
+    sparse_dummy_vars_miniset = pd.DataFrame(
+        index=orders['customer_id'],
+        data=encoder.transform(orders[categorical_columns_miniset]).A,
+    )
+    customer_dummy_features = sparse_dummy_vars_miniset.groupby(sparse_dummy_vars_miniset.index).sum()
+    # Store to disk
+    logger.debug(f"Saving to disk at {output_features_path.as_posix()}...")
+    customer_dummy_features.to_json(
+        output_features_path,
+        orient='table',
+    )
+    return customer_dummy_features
+
+
+def ml_model_dummy_features(training_data, trained_model_path, force=False):
+    if trained_model_path.exists() and not force:
+        logger.warning("ML training 'dummy features' skipped!")
+        search = joblib.load(trained_model_path)
     else:
-        X = train.drop(columns=['is_returning_customer']).to_numpy()
-        y = train['is_returning_customer'].to_numpy()
+        X = training_data.drop(columns=['is_returning_customer']).to_numpy()
+        y = training_data['is_returning_customer'].to_numpy()
+        nb = MultinomialNB()
+        logreg = LogisticRegression(n_jobs=-1, verbose=3)
+        pipe = Pipeline(
+            steps=[('classifier', nb)]
+        )
+        param_grid = [
+            {'classifier': [nb], 'classifier__alpha': [.1, .3, .6, 1]},
+            {'classifier': [logreg], 'classifier__C': np.logspace(-5, 0, 6)},
+        ]
+        search = GridSearchCV(pipe, param_grid, cv=5, scoring='roc_auc', n_jobs=-1, verbose=3)
+        logger.debug(f"Fitting grid search...")
+        search.fit(X, y)
+        logger.debug(f"Best model and parameters (CV score={search.best_score_:.3f}):")
+        logger.debug(f"{search.best_params_}")
+        logger.debug(f"Best Estimator:")
+        logger.debug(f"{search.best_estimator_}")
+        with open(trained_model_path, 'wb') as file_handler:
+            joblib.dump(search, file_handler)
+    return search
+
+
+def ml_model_customer_features(training_data, trained_model_path, force=False):
+    if trained_model_path.exists() and not force:
+        logger.warning("ML training 'customer features' skipped!")
+        search = joblib.load(trained_model_path)
+    else:
+        X = training_data.drop(columns=['is_returning_customer']).to_numpy()
+        y = training_data['is_returning_customer'].to_numpy()
         logger.debug("Pipeline setup...")
         scaler = RobustScaler()
         rf = RandomForestClassifier(n_jobs=-1, verbose=1)
@@ -72,17 +163,22 @@ def ml_model_customer_features(customer_model_path, train=None, force=False):
         logger.debug(f"{search.best_params_}")
         logger.debug(f"Best Estimator:")
         logger.debug(f"{search.best_estimator_}")
-        with open(customer_model_path, 'wb') as file_handler:
+        with open(trained_model_path, 'wb') as file_handler:
             joblib.dump(search, file_handler)
     return search
 
 
 def prepare_train_test(customer_features_path, label_data_path):
     logger.debug(f"Reading customer features from {customer_features_path}...")
-    customer_features = pd.read_json(
-        customer_features_path,
-        orient='table',
-    )
+    logger.debug(f"customer_features_path: {customer_features_path}")
+    if isinstance(customer_features_path, Path):
+        customer_features = pd.read_json(
+            customer_features_path,
+            orient='table',
+        )
+    else:
+        # Read directly a dataframe
+        customer_features = customer_features_path
     labels = pd.read_csv(label_data_path)
     # This aligns the labels with the features on the correct CID
     labels = customer_features.join(labels.set_index('customer_id'))['is_returning_customer']
@@ -219,6 +315,7 @@ def create_customer_features(typed_order_data_path, customer_features_path, forc
             customer_features_path,
             orient='table',
         )
+        return customer_features
 
 
 def preprocess_data(input_data_path, output_data_path, force=False):
